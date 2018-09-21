@@ -79,7 +79,7 @@ class Messwert(models.Model):
     Date = models.DateTimeField()
     Temperature = models.FloatField()
     Pressure = models.FloatField()
-    #geom = jgeoPointField(null=True, blank=True)
+    geom = jgeoPointField(null=True, blank=True)
     
     class Meta:
         verbose_name_plural = "Messwerte"
