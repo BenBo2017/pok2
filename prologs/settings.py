@@ -92,8 +92,8 @@ DATABASES = {
     }
 }
 
-GEOS_LIBRARY_PATH = 'C:\\OSGeo4W64\\bin\\geos_c.dll'
-GDAL_LIBRARY_PATH = 'C:\\OSGeo4W64\\bin\\gdal201.dll'
+#GEOS_LIBRARY_PATH = 'C:\\OSGeo4W64\\bin\\geos_c.dll'
+#GDAL_LIBRARY_PATH = 'C:\\OSGeo4W64\\bin\\gdal201.dll'
 
 
 # Password validation
