@@ -1,0 +1,203 @@
+{% load bootstrap4 %}
+{% load static %}
+
+{# Load CSS and JavaScript #}
+{% bootstrap_css %}
+{% bootstrap_javascript jquery='full' %}
+
+{# Display django.contrib.messages as Bootstrap alerts #}
+{% bootstrap_messages %}
+
+
+
+
+<style>
+
+body {
+  font: 10px sans-serif;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.x.axis path {
+  display: none;
+}
+
+.line {
+  fill: none;
+  stroke: steelblue;
+  stroke-width: 1.5px;
+}
+
+</style>
+<body>
+
+
+
+
+
+
+{% if latest_Measurement %}
+    <ul>
+    {% for measurement in latest_Measurement %}
+        <li>{{ measurement.Date }} Temperature: {{ measurement.Temperature }}</li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No data available.</p>
+{% endif %}
+
+<html>
+
+<div class="navbar navbar-inverse navbar-fixed-top">
+   <div class="navbar-inner">
+       <div class="container">
+           <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+               <span class="icon-bar"></span>
+               <span class="icon-bar"></span>
+               <span class="icon-bar"></span>
+           </button>
+           <a class="brand" href="">Index</a>
+
+           <div class="nav-collapse collapse">
+               <ul class="nav pull-right">
+                   {% if user.is_authenticated %}
+                    <li class="navbar-text">Welcome, {{ user.username }}!</li>
+                    <li><a href="{% url 'logout' %}">Logout</a></li>
+                   {% endif %}
+               </ul>
+           </div>
+           <!--/.nav-collapse -->
+       </div>
+   </div>
+</div>
+
+<div class="container-fluid h-100">
+    <div class="row h-10">
+        <div class="col-sm-6 col-2 h-50 py-2 d-flex align-items-center justify-content-center fixed-top" id="left">
+            <form action="" method="POST">
+            {% csrf_token %}
+            {% bootstrap_form form %}
+            {% buttons %}
+            <button type="submit" value="Submit" class="btn btn-primary" />Submit
+            </button>
+            {% endbuttons %}
+            </form>
+        </div>
+        <div class="col-sm-6 invisible col-2"><!--hidden spacer--></div>
+        <div class="col offset-2 offset-sm-6 py-2 ">
+            {% load leaflet_tags %}
+            {% load geojson_tags %}
+            
+            {% block extra_assets %}
+              {% leaflet_js %}
+              {% leaflet_css %}
+            {% endblock %}
+            
+            
+              <head>
+            
+            
+              </head>
+              <body>
+                <h1>Sonden</h1>
+                {% block content %}
+                <script type="text/javascript">
+                  var collection = {{qs_results|geojsonfeature:"popupContent"|safe }};
+                  function onEachFeature(feature, layer) {
+                    if (feature.properties && feature.properties.popupContent) {
+                      layer.bindPopup(feature.properties.popupContent + '<a href="{% url 'exportCSV' %}?{{ request.GET.urlencode }}">export to csv</a>')
+                    }
+                  }
+                
+                  function map_init(map, options) {
+                    L.geoJson(collection, {onEachFeature: onEachFeature}).addTo(map);
+                  }
+                </script>
+                
+                {% leaflet_map "Sonden" callback="window.map_init" %}
+            
+                {% endblock %}
+              </body>
+
+
+        </div>
+    </div>
+</div>
+
+
+
+
+
+<script src="http://d3js.org/d3.v3.js"></script>
+<script>
+
+var margin = {top: 20, right: 20, bottom: 30, left: 50},
+    width = 300 - margin.left - margin.right,
+    height = 200 - margin.top - margin.bottom;
+
+var parseDate = d3.time.format("%Y-%m-%d").parse;  
+
+var x = d3.time.scale()
+    .range([0, width]);
+
+var y = d3.scale.linear()
+    .range([height, 0]);
+
+var xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom");
+
+var yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left");
+    
+var line = d3.svg.line()
+    .x(function(d) { return x(d.Date); })
+    .y(function(d) { return y(d.Temperature); });
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+d3.json("{% url "renderData" %}", function(error, data){
+
+    
+    data.forEach(function(d) {
+
+        d.Temperature =+ d.fields.Temperature;
+        d.Date = parseDate(d.fields.Date);    
+    });
+
+    
+    x.domain(d3.extent(data, function(d) { return d.Date; }));
+    y.domain(d3.extent(data, function(d) { return d.Temperature; }));
+
+  svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis);
+
+  svg.append("g")
+      .attr("class", "y axis")
+      .call(yAxis);;
+
+  svg.append("path")
+      .datum(data)
+      .attr("class", "line")
+      .attr("d", line);
+      
+});
+
+</script>
+</html>
+
+
+

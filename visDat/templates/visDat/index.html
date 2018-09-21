@@ -1,0 +1,384 @@
+{% load static %}
+{% load bootstrap4 %}
+{% bootstrap_javascript jquery='full' %}
+{# Load CSS and JavaScript #}
+{% bootstrap_css %}
+{# Display django.contrib.messages as Bootstrap alerts #}
+{% bootstrap_messages %}
+{% load leaflet_tags %}
+{% load geojson_tags %}                              
+{% block extra_assets %}
+    {% leaflet_js %}
+    {% leaflet_css %}
+{% endblock %}
+
+
+<style>
+body {
+  font-family: "Roboto","Lucida Grande","DejaVu Sans","Bitstream Vera Sans",Verdana,Arial,sans-serif;
+  font-size: 13px;
+  background-color: lightblue;
+}
+
+.btn-primary {
+  background-color: #336699;
+  border-color:  #336699;
+}
+
+.form-control.is-valid:focus{
+ border-color:  #ffff1a;
+ box-shadow: #e6e600;
+}
+ 
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.x.axis path {
+  display: none;
+}
+
+.line {
+  fill: none;
+  stroke: steelblue;
+  stroke-width: 1.5px;
+}
+
+
+.popupImage {
+    max-width: 250;
+    max-height: 50;
+}
+
+
+.navbar .navbar-nav {
+  display: inline-block;
+  float: none;
+  vertical-align: center;
+}
+
+.container-fluid {
+  height: 100vh;
+}
+
+.col-completeMap {
+    height: 100vh;
+}
+}
+
+.legend {
+    font-size: 12px;
+    font-weight: bold;
+    text-anchor: middle;
+} 
+
+</style>
+<body>
+
+
+
+<div class="container-fluid">
+    
+    <!--Navbar-->
+    <nav class="navbar navbar-expand-lg navbar-dark primary-color">
+    
+        <!-- Navbar brand -->
+        <a class="navbar-brand" href="#"><img alt="Brand" src="{% static 'logo.png' %}" height="100%"></a>
+    
+        <!-- Collapse button -->
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#basicExampleNav" aria-controls="basicExampleNav"
+            aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    
+        <!-- Collapsible content -->
+        <div class="collapse navbar-collapse" id="basicExampleNav">
+    
+            <!-- Links -->
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item active">
+                    <a class="nav-link" href="{% url 'admin:index' %}">Dashboard
+                        <span class="sr-only">(current)</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'logout' %}">Logout</a>
+                </li>
+              </ul>
+            <!-- Links -->
+    
+        </div>
+        <!-- Collapsible content -->
+    
+    </nav>
+    <!--/.Navbar-->
+    
+    
+    <div class="row full-fluid">       
+        <!--/.Sidebar-->
+        <div id="sidebar" class="col-3">
+            <div class="card card-body">
+                   {% if user.is_authenticated %}
+                    <li class="navbar-text">Willkommen, {{ user.username }}!</li>
+                   {% endif %} 
+            </div>
+            <div class="card card-body">
+                <form action="" method="POST">
+                {% csrf_token %}
+                {% bootstrap_form form %}
+                {% buttons %}
+                <button type="submit" value="Submit" class="btn btn-primary"/>Submit
+                </button>
+                {% endbuttons %}
+            </form>
+            </div>
+        </div>        
+        <!--/.Sidebar-->
+        
+        <!--/.Main-->
+        <div id="main" class="col-9">
+        {% if gotData %}
+                    <!--/.Show Data-->
+                    <div class="row full">
+                        <div class="col-6" id="mapArea"> <!--/.Map-->
+                            <div class="card card-body">
+                                  <body>
+                                    
+                                    <script type="text/javascript">
+                                      var collection = {{qs_results|geojsonfeature:"popupContent"|safe }};
+                                      
+                                      function onEachFeature(feature, layer) {
+                                        if (feature.properties && feature.properties.popupContent) {
+                                          layer.bindPopup(feature.properties.popupContent + '<a href="{% url 'exportCSV' %}?{{ request.GET.urlencode }}">export data to csv</a>')
+                                         
+                                        }                                        
+                                      }
+                                      
+                                      function map_init(map, options) {
+                                        
+                                        var geojsonLayer = L.geoJson(collection, {onEachFeature: onEachFeature}).addTo(map);
+                                        var extent = geojsonLayer.getBounds();
+                                        if(extent._northEast.lat == extent._southWest.lat && extent._northEast.lon == extent._southWest.lon){map.setView(extent._northEast,15)}else{map.fitBounds(geojsonLayer.getBounds());};
+                                      }
+                                      
+                                           
+                                    </script>
+                                    
+                                    {% leaflet_map "Sonden" callback="window.map_init" %}
+                                
+                                  </body>
+                            </div>
+                        </div> <!--/.Map-->
+                        
+                        <div class="col-6" id="plotArea"> <!--/.Data plot-->
+                        
+                            <div class="card card-body" id="plotArea2" align="center">
+                                
+                                 <a class="btn btn-primary" href="{% url 'exportCSV' %}?{{ request.GET.urlencode }}" id="bttnDows" role="button">Export as CSV</a>
+                                 <button type="button" class="btn btn-secondary" id="download">Download as PNG</button>
+                                 <a class="btn btn-light" href="{% url 'index' %}" id="bttnDows" role="button">Reset View</a>
+                                
+    
+                
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %} <!--/.End of data-->
+                    
+                    {% if gotData is not True %}
+                        <div class="col-completeMap" id="mapArea">
+                            <div class="card card-body">
+                                  <body>
+                                    <script type="text/javascript">
+                                      var collection = {{qs_results|geojsonfeature:"popupContent"|safe }};
+                                      
+                                      
+                                      function onEachFeature(feature, layer) {
+                                        if (feature.properties && feature.properties.popupContent) {
+                                          layer.bindPopup(feature.properties.popupContent + '<a href="{% url 'exportCSV' %}?{{ request.GET.urlencode }}">export data to csv</a>')
+                                        }
+                                        
+                                      }
+
+                                      
+                                      function map_init(map, options) {
+                                        var geojsonLayer = L.geoJson(collection, {onEachFeature: onEachFeature}).addTo(map);
+                                        var extent = geojsonLayer.getBounds();
+                                        if(extent._northEast.lat == extent._southWest.lat && extent._northEast.lon == extent._southWest.lon){map.setView(extent._northEast,15)}else{map.fitBounds(geojsonLayer.getBounds());};
+                                      }
+                                      
+                                           
+                                    </script>
+                                    
+                                    {% leaflet_map "Sonden" callback="window.map_init" %}
+                                
+                                  </body>
+                            </div>
+                        </div>
+                    {% endif %}
+
+        </div>
+    </div>
+</div>
+
+
+
+<script src="http://d3js.org/d3.v3.js"></script>
+<script src="{%static 'saveSvgAsPng.js'%}"></script>
+
+<script>
+
+{% if gotData %}
+
+var bb = document.querySelector ('#plotArea').getBoundingClientRect();
+var scale = (bb.width/bb.height) * 10.0;
+
+
+var margin = {top: 100, right: 75, bottom: 50, left: 75},
+    width = bb.width - margin.left - margin.right,
+    height = bb.height - margin.top - margin.bottom;
+
+var parseDate = d3.time.format("%Y-%m-%dT%H:%M:%S.000Z").parse;  
+
+
+// Define ranges
+var x = d3.time.scale()
+    .range([0, width]);
+
+var y = d3.scale.linear()
+    .range([height, 0]);
+
+var xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom")
+    .ticks(scale/10);
+
+var yAxisLeft = d3.svg.axis()
+    .scale(y)
+    .orient("left");
+    
+
+
+// Define lines    
+var line = d3.svg.line()
+    .x(function(d) { return x(d.Date); })
+    .y(function(d) { return y(d.Value); });
+    
+
+
+// Add SVG canvas
+var svg = d3.select("#plotArea2").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+    
+d3.selectAll(".tick > text")
+  .style("font-size", scale+ "px");
+  
+
+
+
+d3.json("{% url "renderData" %}", function(error, data){
+
+    data.data.forEach(function(d) {
+        d.Value =+ d.Value;
+        d.Date = parseDate(d.Date); 
+        d.Measurement = d.Meas;
+            
+    });
+
+    
+    x.domain(d3.extent(data.data, function(d) { return d.Date; }));
+    y.domain(d3.extent(data.data, function(d) { return d.Value; }));
+    
+    var dataNest = d3.nest().key(function(d){return d.Measurement;}).entries(data.data);
+       
+    var color = d3.scale.category10();
+    
+    legendSpace = width/(dataNest.length); // spacing for the legend
+    
+    
+    // Loop through each symbol / key
+    dataNest.forEach(function(d,i) { 
+           
+            svg.append("path")
+            .attr("class", "line")
+            .style("stroke", function() { // Add the colours dynamically
+                return d.color = color(d.key); })
+            .attr("id", 'tag'+d.key.replace(/\s+/g, '')) // assign ID
+            .attr("d", line(d.values));
+            
+
+            
+            
+        // Add the Legend
+        
+        svg.append("text")
+            .attr("x", (legendSpace/2)+i*legendSpace)  // space legend
+            .attr("y", height + (margin.bottom/2)+ 5)
+            .attr("class", "legend")    // style the legend
+            
+            .style("fill", function() { // Add the colours dynamically
+                return d.color = color(d.key); })
+            .style("font", scale+"px")
+                
+            .on("click", function(){
+                // Determine if current line is visible 
+                var active   = d.active ? false : true,
+                newOpacity = active ? 0 : 1; 
+                // Hide or show the elements based on the ID
+                d3.select("#tag"+d.key.replace(/\s+/g, ''))
+                    .transition().duration(100) 
+                    .style("opacity", newOpacity); 
+                // Update whether or not the elements are active
+                d.active = active;
+                })  
+            .text(d.key); 
+    });
+    
+
+  svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis);
+      
+  svg.append("text")             
+      .attr("transform",
+            "translate(" + (width/2) + " ," + 
+                           (height+margin.bottom) + ")")
+      .style("text-anchor", "middle")
+      .style("font-size", scale+ "px")
+      .text("Date");
+
+  svg.append("g")
+      .attr("class", "y axis")
+      .style("font", scale+"px")
+      .call(yAxisLeft);
+      
+     
+      
+      // text label for the y axis
+  svg.append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 0 - margin.left)
+      .attr("x",0 - (height / 2))
+      .attr("dy", "1em")
+      .style("text-anchor", "middle")
+      .style("font-size", scale)
+      .text("Temperature");  
+
+});
+
+
+
+d3.select("#download")
+.on('click', function(){
+    // Get the d3js SVG element and save using saveSvgAsPng.js
+    saveSvgAsPng(document.getElementsByTagName("svg")[0], "plot.png", {scale: 2, backgroundColor: "#FFFFFF"});
+})
+{% endif %}
+</script>

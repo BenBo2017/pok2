@@ -1,0 +1,18 @@
+<head>
+<link rel="stylesheet" type="text/css" href="/static/admin/css/base.css" />
+<link rel="stylesheet" type="text/css" href="/static/admin/css/login.css" />
+</head>
+
+<style>
+body{background-color: lightblue;}
+</style>
+
+{% load staticfiles %}
+
+<img src="{% static 'logo.png' %}" />
+<h2>Login</h2>
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+<button type="submit" class="btn btn-primary">Login</button>
+</form>
